@@ -60,11 +60,30 @@ export function resolveAccount(data, key) {
     );
   }
   const k = key.trim().toLowerCase();
-  const hit = list.find((a) => a.email.toLowerCase() === k || (a.alias && a.alias.toLowerCase() === k));
-  if (!hit) throw new Error(`Unknown account "${key}". Connected: ${list.map(describe).join(", ")}`);
-  return hit;
+  const byEmail = list.find((a) => a.email.toLowerCase() === k);
+  if (byEmail) return byEmail;
+  const hits = list.filter((a) => a.alias && a.alias.toLowerCase() === k);
+  if (hits.length > 1) {
+    throw new Error(
+      `"${key}" is the name of more than one account (${hits.map((a) => a.email).join(", ")}). ` +
+        `Use the email address, or rename one: node src/auth-cli.js alias <email> <new-name>`
+    );
+  }
+  if (!hits.length) throw new Error(`Unknown account "${key}". Connected: ${list.map(describe).join(", ")}`);
+  return hits[0];
 }
 
 export function describe(a) {
   return a.alias ? `${a.alias} (${a.email})` : a.email;
+}
+
+/** Throw if `alias` is already used by an account other than `email`. */
+export function assertAliasFree(data, alias, email) {
+  if (!alias) return;
+  const clash = Object.values(data.accounts).find(
+    (a) => a.email !== email && a.alias && a.alias.toLowerCase() === alias.toLowerCase()
+  );
+  if (clash) {
+    throw new Error(`The name "${alias}" is already used by ${clash.email}. Pick a different name.`);
+  }
 }

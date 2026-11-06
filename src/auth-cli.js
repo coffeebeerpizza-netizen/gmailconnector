@@ -10,7 +10,7 @@ import { exec } from "node:child_process";
 import { OAuth2Client } from "google-auth-library";
 import { gmail as gmailApi } from "@googleapis/gmail";
 import {
-  SCOPES, ACCOUNTS_PATH, loadClientCredentials, loadAccounts, saveAccounts, resolveAccount, describe,
+  SCOPES, ACCOUNTS_PATH, loadClientCredentials, loadAccounts, saveAccounts, resolveAccount, describe, assertAliasFree,
 } from "./config.js";
 
 const [cmd, ...args] = process.argv.slice(2);
@@ -23,6 +23,12 @@ function openBrowser(url) {
 
 async function addAccount(alias) {
   const { clientId, clientSecret } = loadClientCredentials();
+  // Fail fast if the name is taken (re-checked after sign-in, once we know the email).
+  const taken = alias && Object.values(loadAccounts().accounts).filter((a) => a.alias?.toLowerCase() === alias.toLowerCase());
+  if (taken?.length) {
+    console.log(`Note: "${alias}" is already used by ${taken.map((a) => a.email).join(", ")}. ` +
+      `That's fine if you're re-connecting that same account; otherwise press Ctrl+C and pick another name.`);
+  }
 
   // Loopback flow: Google redirects back to a temporary local server.
   const server = http.createServer();
@@ -64,6 +70,7 @@ async function addAccount(alias) {
 
   const data = loadAccounts();
   const existing = data.accounts[email];
+  assertAliasFree(data, alias, email);
   data.accounts[email] = {
     email,
     alias: alias || existing?.alias || null,
@@ -113,6 +120,7 @@ async function main() {
     }
     case "alias": {
       const a = pick(data, args[0]);
+      assertAliasFree(data, args[1], a.email);
       a.alias = args[1] || null;
       saveAccounts(data);
       return console.log(`Updated: ${describe(a)}.`);
