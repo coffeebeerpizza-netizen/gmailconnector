@@ -12,12 +12,14 @@
     "add-account": "node src/auth-cli.js add",
     "accounts": "node src/auth-cli.js list"
   },
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@googleapis/gmail": "22.0.2",
     "@modelcontextprotocol/sdk": "1.32.2",
     "google-auth-library": "11.3.3",
-    "zod": "3.25.76"
+    "zod": "4.6.7"
   },
   "license": "MIT"
 }
