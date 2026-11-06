@@ -1,0 +1,23 @@
+{
+  "name": "gmail-multi-mcp",
+  "version": "1.0.0",
+  "description": "Local MCP server that connects Claude to several Gmail accounts at once",
+  "type": "module",
+  "bin": {
+    "gmail-multi-mcp": "src/server.js",
+    "gmail-multi-auth": "src/auth-cli.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "add-account": "node src/auth-cli.js add",
+    "accounts": "node src/auth-cli.js list"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@googleapis/gmail": "22.0.2",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "google-auth-library": "11.3.3",
+    "zod": "3.25.76"
+  },
+  "license": "MIT"
+}
