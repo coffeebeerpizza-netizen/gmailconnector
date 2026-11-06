@@ -182,7 +182,10 @@ async function load(){
     state.data = await api(`/api/messages?q=${encodeURIComponent(state.query)}&max=500`);
     render();
   } catch (e) {
-    $("#groups").innerHTML = `<div class="err"><b>Couldn't load mail.</b><br>${esc(e.message)}<br><br>If you restarted the dashboard, reload this page.</div>`;
+    const down = /load failed|failed to fetch|networkerror/i.test(e.message);
+    $("#groups").innerHTML = down
+      ? `<div class="err"><b>The dashboard program isn't running.</b><br>Start it again from the menu bar (Open dashboard), or in Terminal:<br><code>cd ~/Dev/gmailconnector &amp;&amp; npm run dashboard</code><br>then reload this page.</div>`
+      : `<div class="err"><b>Couldn't load mail.</b><br>${esc(e.message)}<br><br>${/bad token/.test(e.message) ? "The dashboard was restarted. Reload this page." : ""}</div>`;
     $("#sub").textContent = "";
   }
 }

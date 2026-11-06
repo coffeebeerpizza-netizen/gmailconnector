@@ -56,7 +56,7 @@ export async function render({ gmailFor } = {}) {
     for (const m of items.slice(0, 10)) lines.push(`----${clean(m.senderName, 24)}: ${clean(m.subject, 50)} | href=${m.link}`);
   }
   lines.push("---");
-  lines.push(`Open dashboard | bash=${shq(node)} param1=${shq(dashboard)} terminal=false`);
+  lines.push(`Open dashboard | bash=${shq(node)} param1=${shq(dashboard)} param2=--background terminal=false`);
   lines.push(`Email me the digest now | bash=${shq(node)} param1=${shq(digest)} terminal=false`);
   lines.push("Refresh | refresh=true");
   lines.push(`Dashboard address: 127.0.0.1:${DEFAULT_PORT} | size=11 color=gray`);

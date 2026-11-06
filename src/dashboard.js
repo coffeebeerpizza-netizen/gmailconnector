@@ -7,9 +7,9 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { exec } from "node:child_process";
+import { exec, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { loadAccounts, describe } from "./config.js";
+import { HOME, loadAccounts, describe } from "./config.js";
 import { gmailFor as realGmailFor, explainError, buildRaw, replyContext } from "./gmail.js";
 import { CATEGORIES, fetchAll, loadPrefs, savePrefs, threadTranscript } from "./mail.js";
 import { askClaude as realAskClaude, REPLY_SYSTEM } from "./claude.js";
@@ -129,6 +129,7 @@ export function createDashboard({
 
       return json(res, 404, { error: "not found" });
     } catch (e) {
+      console.error(new Date().toISOString(), url.pathname, e.message);
       return json(res, e.status || (acct ? 502 : 500), { error: acct ? explainError(e, acct) : e.message });
     }
   });
@@ -140,7 +141,31 @@ export function openBrowser(url) {
   exec(`${opener} "${url}"`, () => {});
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+// --background: start a detached copy that keeps running after this process exits
+// (used by the menu bar), logging to ~/.gmail-multi-mcp/dashboard.log.
+async function startInBackground(port) {
+  const url = `http://127.0.0.1:${port}/`;
+  const running = await fetch(url + "ping").then((r) => r.json()).then((j) => j.app === "gmail-multi-dashboard").catch(() => false);
+  if (!running) {
+    const logPath = path.join(HOME, "dashboard.log");
+    const out = fs.openSync(logPath, "a");
+    const child = spawn(process.execPath, [fileURLToPath(import.meta.url)], {
+      detached: true, stdio: ["ignore", out, out], env: { ...process.env, NO_OPEN: "1" },
+    });
+    child.unref();
+    for (let i = 0; i < 40; i++) {
+      await new Promise((r) => setTimeout(r, 250));
+      if (await fetch(url + "ping").then(() => true).catch(() => false)) break;
+    }
+  }
+  openBrowser(url);
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]) && process.argv[2] === "--background") {
+  startInBackground(Number(process.env.PORT) || DEFAULT_PORT).then(() => process.exit(0));
+} else if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  process.on("uncaughtException", (e) => console.error(new Date().toISOString(), "Unexpected error:", e));
+  process.on("unhandledRejection", (e) => console.error(new Date().toISOString(), "Unexpected error:", e));
   const port = Number(process.env.PORT) || DEFAULT_PORT;
   const url = `http://127.0.0.1:${port}/`;
   const { server } = createDashboard();
