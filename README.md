@@ -39,7 +39,7 @@ You only need one client, and it works for all your accounts.
 ### 2. Install
 Requires Node.js 18 or newer.
 ```bash
-git clone -b dev https://github.com/coffeebeerpizza-netizen/gmailconnector && cd gmailconnector && npm install
+git clone https://github.com/coffeebeerpizza-netizen/gmailconnector && cd gmailconnector && npm install
 ```
 
 ### 3. Connect each account
