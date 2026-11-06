@@ -42,13 +42,17 @@ async function addAccount(alias) {
     scope: SCOPES,
   });
 
-  console.log("\nOpening your browser to sign in. If it doesn't open, visit:\n\n" + authUrl + "\n");
-  openBrowser(authUrl);
+  // A short local link that redirects to Google, so the long URL can't get cut off when copied.
+  const startUrl = `${redirectUri}/start`;
+  console.log("\nOpening your browser to sign in. If it doesn't open, copy this link into your browser:\n\n  " +
+    startUrl + "\n\n(Keep this window open until it says Connected. Each run makes a new link.)\n");
+  openBrowser(startUrl);
 
   const code = await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("Timed out waiting for sign-in (5 min).")), 300_000);
     server.on("request", (req, res) => {
       const url = new URL(req.url, redirectUri);
+      if (url.pathname === "/start") { res.writeHead(302, { Location: authUrl }).end(); return; }
       const code = url.searchParams.get("code");
       const error = url.searchParams.get("error");
       if (!code && !error) { res.writeHead(404).end(); return; }
