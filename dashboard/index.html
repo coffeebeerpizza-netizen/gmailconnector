@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flagged Mail</title>
+<style>
+:root{
+  --bg:#f6f4ef;--panel:#ffffff;--ink:#1d1f23;--muted:#6b6f76;--line:#e6e2d9;--soft:#f0ede6;
+  --accent:#c2410c;--accent-ink:#ffffff;--ok:#15803d;--bar:#e9e5dc;--focus:#2563eb;
+  --a0:#2563eb;--a1:#c2410c;--a2:#7c3aed;--a3:#0f766e;--a4:#be185d;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 1px 1px rgba(0,0,0,.03);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#141518;--panel:#1c1e22;--ink:#e8e8e6;--muted:#9a9ea6;--line:#2c2f35;--soft:#23262b;
+  --accent:#fb923c;--accent-ink:#1a1a1a;--ok:#4ade80;--bar:#2a2d33;--focus:#60a5fa;
+  --a0:#60a5fa;--a1:#fb923c;--a2:#a78bfa;--a3:#2dd4bf;--a4:#f472b6;
+  --shadow:none;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+button,select,input{font:inherit;color:inherit}
+main{max-width:1040px;margin:0 auto;padding:24px 16px 80px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px}
+h1{font-size:1.6rem;margin:0;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:.9rem}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 12px;cursor:pointer;box-shadow:var(--shadow);white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{padding:3px 9px;font-size:.82rem}
+.btn:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.stat .n{font-size:1.5rem;font-weight:650;font-variant-numeric:tabular-nums}
+.stat .l{color:var(--muted);font-size:.85rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
+.toolbar input[type=search]{flex:1 1 220px;min-width:0;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 10px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:.88rem}
+.chip[aria-pressed=false]{opacity:.45}
+.toggle{display:inline-flex;align-items:center;gap:6px;font-size:.9rem;color:var(--muted);cursor:pointer}
+select.q{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 8px}
+details.group{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;box-shadow:var(--shadow);overflow:hidden}
+details.group>summary{list-style:none;cursor:pointer;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center}
+details.group>summary::-webkit-details-marker{display:none}
+.gname{font-weight:650;display:flex;align-items:center;gap:8px}
+.gname .caret{transition:transform .15s;color:var(--muted);font-size:.8rem}
+details[open] .caret{transform:rotate(90deg)}
+.gcount{color:var(--muted);font-weight:400;font-size:.88rem}
+.gactions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.bar{grid-column:1/-1;height:6px;background:var(--bar);border-radius:3px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--ok);transition:width .25s}
+.badge{font-size:.72rem;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--accent);color:var(--accent-ink)}
+ul.rows{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+li.row{display:grid;grid-template-columns:28px 1fr auto;gap:4px 10px;padding:10px 14px;border-bottom:1px solid var(--line);align-items:start}
+li.row:last-child{border-bottom:0}
+li.row.read .subj,li.row.read .from{font-weight:400;color:var(--muted)}
+li.row input[type=checkbox]{width:18px;height:18px;margin:2px 0 0;accent-color:var(--ok);cursor:pointer}
+.main{min-width:0}
+.line1{display:flex;gap:8px;align-items:baseline;min-width:0}
+.from{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40%}
+.subj{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.snip{color:var(--muted);font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{display:flex;gap:8px;align-items:center;margin-top:4px;flex-wrap:wrap;font-size:.8rem;color:var(--muted)}
+.acct{display:inline-flex;align-items:center;gap:5px}
+.side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:.8rem;color:var(--muted);white-space:nowrap}
+.links{display:flex;gap:10px}
+.links a,.links button{color:var(--muted);background:none;border:0;padding:0;cursor:pointer;font-size:.8rem;text-decoration:underline;text-underline-offset:2px}
+.links a:hover,.links button:hover{color:var(--ink)}
+select.move{border:1px solid var(--line);background:var(--soft);border-radius:6px;padding:1px 4px;font-size:.78rem;max-width:150px}
+.empty,.loading,.err{background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:28px;text-align:center;color:var(--muted)}
+.err{border-style:solid;color:var(--ink);text-align:left}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;display:flex;gap:12px;align-items:center;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:calc(100% - 32px);z-index:20}
+.toast button{background:none;border:0;color:inherit;text-decoration:underline;cursor:pointer;font-weight:600}
+.hidden{display:none!important}
+@media (max-width:640px){
+  li.row{grid-template-columns:26px 1fr}
+  .side{grid-column:2;flex-direction:row;align-items:center;justify-content:space-between;width:100%}
+  .from{max-width:none}
+  .line1{flex-direction:column;gap:0}
+  details.group>summary{grid-template-columns:1fr}
+  .gactions{justify-content:flex-start}
+}
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div>
+      <h1>Flagged Mail</h1>
+      <div class="sub" id="sub">Loading your accounts…</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select class="q" id="q" aria-label="Which emails">
+        <option value="is:starred">Starred</option>
+        <option value="is:starred is:unread">Starred &amp; unread</option>
+        <option value="is:important is:unread newer_than:14d">Important, unread (14 days)</option>
+        <option value="in:inbox is:unread">Unread in inbox</option>
+      </select>
+      <button class="btn primary" id="refresh">Refresh</button>
+    </div>
+  </header>
+
+  <section class="stats" id="stats" aria-label="Totals"></section>
+
+  <div class="toolbar">
+    <input type="search" id="search" placeholder="Search sender, subject or text  ( / )" aria-label="Search">
+    <span id="chips" style="display:flex;gap:6px;flex-wrap:wrap"></span>
+    <label class="toggle"><input type="checkbox" id="hideRead"> Hide read</label>
+    <button class="btn small" id="expand">Expand all</button>
+  </div>
+
+  <div id="groups"><div class="loading">Fetching mail from Gmail…</div></div>
+</main>
+<div class="toast hidden" id="toast" role="status" aria-live="polite"><span id="toastMsg"></span><button id="toastUndo">Undo</button></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+const ACCT_COLORS = ["var(--a0)","var(--a1)","var(--a2)","var(--a3)","var(--a4)"];
+const store = {
+  get(k, d){ try { const v = localStorage.getItem("gmd:"+k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem("gmd:"+k, JSON.stringify(v)); } catch {} },
+};
+const state = {
+  data: null,
+  hiddenAccounts: new Set(store.get("hiddenAccounts", [])),
+  collapsed: new Set(store.get("collapsed", [])),
+  hideRead: store.get("hideRead", false),
+  query: store.get("query", "is:starred"),
+  search: "",
+};
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+async function api(path, body) {
+  const r = await fetch(path, {
+    method: body ? "POST" : "GET",
+    headers: { "x-token": TOKEN, ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+
+function relTime(ts){
+  if (!ts) return "";
+  const d = (Date.now() - ts) / 1000;
+  if (d < 3600) return Math.max(1, Math.round(d/60)) + "m ago";
+  if (d < 86400) return Math.round(d/3600) + "h ago";
+  if (d < 86400*7) return Math.round(d/86400) + "d ago";
+  const dt = new Date(ts);
+  return dt.toLocaleDateString(undefined, { month:"short", day:"numeric", ...(dt.getFullYear() !== new Date().getFullYear() ? { year:"numeric" } : {}) });
+}
+const acctColor = (email) => ACCT_COLORS[Math.max(0, state.data.accounts.findIndex(a => a.email === email)) % ACCT_COLORS.length];
+const gmailLink = (m) => `https://mail.google.com/mail/?authuser=${encodeURIComponent(m.account)}#all/${m.threadId}`;
+
+let toastTimer, undoFn;
+function toast(msg, undo){
+  $("#toastMsg").textContent = msg;
+  undoFn = undo;
+  $("#toastUndo").classList.toggle("hidden", !undo);
+  $("#toast").classList.remove("hidden");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $("#toast").classList.add("hidden"), 6000);
+}
+$("#toastUndo").onclick = () => { $("#toast").classList.add("hidden"); undoFn && undoFn(); };
+
+async function load(){
+  $("#groups").innerHTML = '<div class="loading">Fetching mail from Gmail…</div>';
+  $("#sub").textContent = "Loading…";
+  try {
+    state.data = await api(`/api/messages?q=${encodeURIComponent(state.query)}&max=500`);
+    render();
+  } catch (e) {
+    $("#groups").innerHTML = `<div class="err"><b>Couldn't load mail.</b><br>${esc(e.message)}<br><br>If you restarted the dashboard, reload this page.</div>`;
+    $("#sub").textContent = "";
+  }
+}
+
+function visible(m){
+  if (state.hiddenAccounts.has(m.account)) return false;
+  if (state.hideRead && !m.unread) return false;
+  if (state.search) {
+    const s = state.search.toLowerCase();
+    if (!(`${m.from} ${m.subject} ${m.snippet}`.toLowerCase().includes(s))) return false;
+  }
+  return true;
+}
+
+function render(){
+  const d = state.data;
+  const all = d.messages;
+  const unread = all.filter(m => m.unread).length;
+  $("#sub").textContent = `${all.length} emails · ${d.accounts.length} accounts · updated ${new Date().toLocaleTimeString([], { hour:"numeric", minute:"2-digit" })}`;
+
+  // Stats
+  const perAcct = d.accounts.map(a => {
+    const ms = all.filter(m => m.account === a.email);
+    return `<div class="stat"><div class="n">${ms.length}</div><div class="l"><span class="dot" style="background:${acctColor(a.email)}"></span>${esc(a.label)} · ${ms.filter(m=>m.unread).length} unread</div></div>`;
+  }).join("");
+  $("#stats").innerHTML =
+    `<div class="stat"><div class="n">${all.length}</div><div class="l">Total</div></div>` +
+    `<div class="stat"><div class="n">${unread}</div><div class="l">Unread</div></div>` + perAcct;
+
+  // Account chips
+  $("#chips").innerHTML = d.accounts.map(a =>
+    `<button class="chip" data-acct="${esc(a.email)}" aria-pressed="${!state.hiddenAccounts.has(a.email)}" title="${esc(a.email)}"><span class="dot" style="background:${acctColor(a.email)}"></span>${esc(a.label)}</button>`
+  ).join("");
+
+  // Groups
+  const errs = d.errors?.length ? `<div class="err" style="margin-bottom:12px"><b>Some accounts had problems:</b><br>${d.errors.map(esc).join("<br>")}</div>` : "";
+  const groups = d.categories.map(cat => {
+    const items = all.filter(m => m.category === cat);
+    if (!items.length) return "";
+    const shown = items.filter(visible);
+    const read = items.filter(m => !m.unread).length;
+    const pct = Math.round(read / items.length * 100);
+    const open = !state.collapsed.has(cat);
+    const unreadN = items.length - read;
+    return `<details class="group" data-cat="${esc(cat)}" ${open ? "open" : ""}>
+      <summary>
+        <span class="gname"><span class="caret">▶</span>${esc(cat)} <span class="gcount">${items.length}${shown.length !== items.length ? ` · ${shown.length} shown` : ""}</span>${unreadN ? `<span class="badge">${unreadN} unread</span>` : ""}</span>
+        <span class="gactions">
+          <button class="btn small" data-bulk="read" data-cat="${esc(cat)}">Mark all read</button>
+          <button class="btn small" data-bulk="unstar" data-cat="${esc(cat)}">Unstar all</button>
+        </span>
+        <span class="bar" title="${read} of ${items.length} read"><i style="width:${pct}%"></i></span>
+      </summary>
+      <ul class="rows">${shown.length ? shown.map(row).join("") : `<li class="row"><span></span><span class="snip">Nothing matches the current filters.</span></li>`}</ul>
+    </details>`;
+  }).join("");
+  $("#groups").innerHTML = errs + (groups || '<div class="empty">No emails match this view. 🎉</div>');
+}
+
+function row(m){
+  const opts = state.data.categories.map(c => `<option ${c === m.category ? "selected" : ""}>${esc(c)}</option>`).join("");
+  return `<li class="row ${m.unread ? "" : "read"}" data-id="${m.id}">
+    <input type="checkbox" ${m.unread ? "" : "checked"} data-act="toggle" data-id="${m.id}" aria-label="Read: ${esc(m.subject)}" title="Tick when read">
+    <div class="main">
+      <div class="line1"><span class="from" title="${esc(m.from)}">${esc(m.senderName)}</span><span class="subj">${esc(m.subject)}</span></div>
+      <div class="snip">${esc(m.snippet)}</div>
+      <div class="meta">
+        <span class="acct"><span class="dot" style="background:${acctColor(m.account)}"></span>${esc(m.accountLabel)}</span>
+        <label>Group: <select class="move" data-act="move" data-id="${m.id}" aria-label="Move sender to group">${opts}</select></label>
+      </div>
+    </div>
+    <div class="side">
+      <span title="${esc(m.date)}">${relTime(m.ts)}</span>
+      <span class="links">
+        <a href="${gmailLink(m)}" target="_blank" rel="noopener">Open</a>
+        ${m.unsubscribe ? `<a href="${esc(m.unsubscribe)}" target="_blank" rel="noopener noreferrer">Unsubscribe</a>` : ""}
+        ${m.starred ? `<button data-act="unstar" data-id="${m.id}">Unstar</button>` : `<button data-act="star" data-id="${m.id}">Star</button>`}
+      </span>
+    </div>
+  </li>`;
+}
+
+const byId = (id) => state.data.messages.find(m => m.id === id);
+
+// Apply a label action to messages (may span accounts), optimistically.
+async function modify(msgs, action, { silent } = {}){
+  const apply = (a) => msgs.forEach(m => {
+    if (a === "read") m.unread = false;
+    if (a === "unread") m.unread = true;
+    if (a === "unstar") m.starred = false;
+    if (a === "star") m.starred = true;
+  });
+  apply(action);
+  render();
+  const byAcct = {};
+  msgs.forEach(m => (byAcct[m.account] ||= []).push(m.id));
+  try {
+    await Promise.all(Object.entries(byAcct).map(([account, ids]) => api("/api/modify", { account, ids, action })));
+  } catch (e) {
+    const inverse = { read:"unread", unread:"read", unstar:"star", star:"unstar" }[action];
+    apply(inverse); render();
+    toast("Gmail didn't accept that: " + e.message);
+    return false;
+  }
+  if (!silent) {
+    const inverse = { read:"unread", unread:"read", unstar:"star", star:"unstar" }[action];
+    const label = { read:"Marked read", unread:"Marked unread", unstar:"Unstarred", star:"Starred" }[action];
+    toast(`${label}: ${msgs.length} email${msgs.length === 1 ? "" : "s"}`, () => modify(msgs, inverse, { silent: true }));
+  }
+  return true;
+}
+
+document.addEventListener("change", async (e) => {
+  const t = e.target;
+  if (t.dataset.act === "toggle") {
+    const m = byId(t.dataset.id);
+    await modify([m], t.checked ? "read" : "unread", { silent: true });
+  } else if (t.dataset.act === "move") {
+    const m = byId(t.dataset.id);
+    const cat = t.value, before = m.category;
+    const same = state.data.messages.filter(x => x.senderEmail === m.senderEmail);
+    same.forEach(x => x.category = cat); render();
+    try {
+      await api("/api/category", { sender: m.senderEmail, category: cat });
+      toast(`Moved ${m.senderName} (${same.length}) to ${cat}`, async () => {
+        same.forEach(x => x.category = before); render();
+        await api("/api/category", { sender: m.senderEmail, category: before });
+      });
+    } catch (err) { same.forEach(x => x.category = before); render(); toast("Couldn't save: " + err.message); }
+  } else if (t.id === "hideRead") {
+    state.hideRead = t.checked; store.set("hideRead", state.hideRead); render();
+  } else if (t.id === "q") {
+    state.query = t.value; store.set("query", state.query); load();
+  }
+});
+
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button");
+  if (!t) return;
+  if (t.dataset.bulk) {
+    e.preventDefault(); e.stopPropagation();
+    const items = state.data.messages.filter(m => m.category === t.dataset.cat && visible(m));
+    const targets = t.dataset.bulk === "read" ? items.filter(m => m.unread) : items.filter(m => m.starred);
+    if (!targets.length) return toast("Nothing to change in this group.");
+    if (t.dataset.bulk === "unstar" && !confirm(`Unstar ${targets.length} emails in "${t.dataset.cat}"? They'll drop off the Starred view (you can Undo).`)) return;
+    modify(targets, t.dataset.bulk);
+  } else if (t.dataset.act === "unstar" || t.dataset.act === "star") {
+    modify([byId(t.dataset.id)], t.dataset.act);
+  } else if (t.dataset.acct) {
+    const a = t.dataset.acct;
+    state.hiddenAccounts.has(a) ? state.hiddenAccounts.delete(a) : state.hiddenAccounts.add(a);
+    store.set("hiddenAccounts", [...state.hiddenAccounts]); render();
+  } else if (t.id === "refresh") {
+    load();
+  } else if (t.id === "expand") {
+    const anyClosed = [...document.querySelectorAll("details.group")].some(d => !d.open);
+    state.collapsed = anyClosed ? new Set() : new Set(state.data.categories);
+    store.set("collapsed", [...state.collapsed]);
+    t.textContent = anyClosed ? "Collapse all" : "Expand all";
+    render();
+  }
+});
+
+document.addEventListener("toggle", (e) => {
+  const d = e.target;
+  if (!d.matches?.("details.group")) return;
+  d.open ? state.collapsed.delete(d.dataset.cat) : state.collapsed.add(d.dataset.cat);
+  store.set("collapsed", [...state.collapsed]);
+}, true);
+
+let searchTimer;
+$("#search").addEventListener("input", (e) => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { state.search = e.target.value.trim(); render(); }, 120);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" && document.activeElement !== $("#search")) { e.preventDefault(); $("#search").focus(); }
+});
+
+$("#hideRead").checked = state.hideRead;
+$("#q").value = state.query;
+if ($("#q").value !== state.query) { state.query = "is:starred"; $("#q").value = state.query; }
+load();
+</script>
+</body>
+</html>

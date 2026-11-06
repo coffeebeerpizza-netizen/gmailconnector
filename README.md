@@ -77,6 +77,25 @@ claude mcp add gmail-multi --scope user -- node /full/path/to/gmailconnector/src
 
 Next, try asking Claude: *"What's unread across all my accounts today?"* or *"Reply to that from my work account saying I'll be there."*
 
+## Dashboard
+
+A page in your browser that shows starred mail from all your accounts, grouped by kind:
+
+```bash
+npm run dashboard
+```
+
+It opens <http://127.0.0.1:8765>. Keep the Terminal window open while you use it, and press Ctrl+C to stop.
+
+- **Groups:** Conversations (real people) come first, then AI & Tech, Food & Drink, Travel & Housing, Money & Finance, Orders & Support, News & Politics, Promotions and Other newsletters. Each group shows a count, how many are unread, and a progress bar.
+- **Checkboxes:** a ticked box marks the email read in Gmail, and unticking marks it unread.
+- **Group buttons:** "Mark all read" and "Unstar all" act on the whole group (or on the emails your filters show). You can undo them.
+- **Move to another group:** use the "Group" menu on any email. Every email from that sender moves, and the dashboard remembers it in `~/.gmail-multi-mcp/dashboard.json`.
+- **Filters:** turn accounts on or off, hide read emails, or search (press `/`). The menu at the top switches between Starred, Starred & unread, Important, and Unread inbox.
+- **Links:** Open goes to the email in Gmail, and Unsubscribe appears for newsletters that offer it.
+
+The dashboard only accepts connections from your own computer, and every request has to carry a secret key that changes each time it starts. Other websites can't use it.
+
 ## Notes
 - **Scope:** `gmail.modify` lets the server read, send, label, archive and trash mail. It can't permanently delete mail.
 - **Expired sign-in** (e.g. you changed your password or revoked access): the tool tells you which account. Re-run `npm run add-account -- <alias>`.

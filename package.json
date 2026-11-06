@@ -5,12 +5,14 @@
   "type": "module",
   "bin": {
     "gmail-multi-mcp": "src/server.js",
-    "gmail-multi-auth": "src/auth-cli.js"
+    "gmail-multi-auth": "src/auth-cli.js",
+    "gmail-multi-dashboard": "src/dashboard.js"
   },
   "scripts": {
     "start": "node src/server.js",
     "add-account": "node src/auth-cli.js add",
-    "accounts": "node src/auth-cli.js list"
+    "accounts": "node src/auth-cli.js list",
+    "dashboard": "node src/dashboard.js"
   },
   "engines": {
     "node": ">=18"
