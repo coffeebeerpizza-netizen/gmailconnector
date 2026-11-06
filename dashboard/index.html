@@ -73,6 +73,14 @@ select.move{border:1px solid var(--line);background:var(--soft);border-radius:6p
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;display:flex;gap:12px;align-items:center;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:calc(100% - 32px);z-index:20}
 .toast button{background:none;border:0;color:inherit;text-decoration:underline;cursor:pointer;font-weight:600}
 .hidden{display:none!important}
+.draft{grid-column:2/-1;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:10px;margin-top:6px;display:grid;gap:8px}
+.draft input,.draft textarea{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 9px;font:inherit;color:inherit}
+.draft textarea{min-height:140px;resize:vertical;line-height:1.45}
+.draft .drow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.draft .note{color:var(--muted);font-size:.8rem}
+.draft .status{font-size:.85rem;color:var(--muted)}
+.draft .status.bad{color:var(--accent)}
+.links .reply{color:var(--accent);font-weight:600}
 @media (max-width:640px){
   li.row{grid-template-columns:26px 1fr}
   .side{grid-column:2;flex-direction:row;align-items:center;justify-content:space-between;width:100%}
@@ -128,6 +136,7 @@ const state = {
   hideRead: store.get("hideRead", false),
   query: store.get("query", "is:starred"),
   search: "",
+  drafts: {},   // id -> { instructions, text, busy, status, bad }
 };
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
@@ -249,11 +258,32 @@ function row(m){
       <span title="${esc(m.date)}">${relTime(m.ts)}</span>
       <span class="links">
         <a href="${gmailLink(m)}" target="_blank" rel="noopener">Open</a>
+        ${!m.unsubscribe ? `<button class="reply" data-act="draft" data-id="${m.id}">Draft reply</button>` : ""}
         ${m.unsubscribe ? `<a href="${esc(m.unsubscribe)}" target="_blank" rel="noopener noreferrer">Unsubscribe</a>` : ""}
         ${m.starred ? `<button data-act="unstar" data-id="${m.id}">Unstar</button>` : `<button data-act="star" data-id="${m.id}">Star</button>`}
       </span>
     </div>
+    ${state.drafts[m.id] ? draftPanel(m, state.drafts[m.id]) : ""}
   </li>`;
+}
+
+function draftPanel(m, d){
+  return `<div class="draft" data-id="${m.id}">
+    <div class="drow">
+      <input data-dfield="instructions" data-id="${m.id}" value="${esc(d.instructions || "")}" placeholder="Optional: what do you want to say? e.g. “yes, Tuesday at 3 works”" aria-label="What to say">
+    </div>
+    <div class="drow">
+      <button class="btn small primary" data-act="write" data-id="${m.id}" ${d.busy ? "disabled" : ""}>${d.busy ? "Claude is writing…" : d.text ? "Rewrite with Claude" : "Write draft with Claude"}</button>
+      <span class="note">Uses your Claude Code login. Nothing is sent: saving puts it in Gmail Drafts.</span>
+    </div>
+    <textarea data-dfield="text" data-id="${m.id}" placeholder="Your reply. Write it here, or let Claude draft it." aria-label="Reply text">${esc(d.text || "")}</textarea>
+    <div class="drow">
+      <button class="btn small" data-act="save" data-id="${m.id}" ${d.busy || !d.text ? "disabled" : ""}>Save to Gmail drafts</button>
+      <button class="btn small" data-act="copy" data-id="${m.id}" ${!d.text ? "disabled" : ""}>Copy</button>
+      <button class="btn small" data-act="closedraft" data-id="${m.id}">Close</button>
+      <span class="status ${d.bad ? "bad" : ""}">${d.status || ""}</span>
+    </div>
+  </div>`;
 }
 
 const byId = (id) => state.data.messages.find(m => m.id === id);
@@ -320,6 +350,8 @@ document.addEventListener("click", (e) => {
     if (!targets.length) return toast("Nothing to change in this group.");
     if (t.dataset.bulk === "unstar" && !confirm(`Unstar ${targets.length} emails in "${t.dataset.cat}"? They'll drop off the Starred view (you can Undo).`)) return;
     modify(targets, t.dataset.bulk);
+  } else if (["draft","write","save","copy","closedraft"].includes(t.dataset.act)) {
+    draftAction(t.dataset.act, t.dataset.id);
   } else if (t.dataset.act === "unstar" || t.dataset.act === "star") {
     modify([byId(t.dataset.id)], t.dataset.act);
   } else if (t.dataset.acct) {
@@ -344,13 +376,64 @@ document.addEventListener("toggle", (e) => {
   store.set("collapsed", [...state.collapsed]);
 }, true);
 
+document.addEventListener("input", (e) => {
+  const t = e.target;
+  if (!t.dataset.dfield) return;
+  const d = state.drafts[t.dataset.id];
+  if (!d) return;
+  const hadText = !!d.text;
+  d[t.dataset.dfield] = t.value;
+  if (t.dataset.dfield === "text" && hadText !== !!t.value) {
+    const panel = t.closest(".draft");
+    panel.querySelector('[data-act="save"]').disabled = !t.value || d.busy;
+    panel.querySelector('[data-act="copy"]').disabled = !t.value;
+  }
+});
+
+async function draftAction(act, id){
+  const m = byId(id);
+  if (act === "draft") {
+    state.drafts[id] ||= {};
+    render();
+    document.querySelector(`.draft[data-id="${id}"] input`)?.focus();
+    return;
+  }
+  const d = state.drafts[id];
+  if (act === "closedraft") { delete state.drafts[id]; return render(); }
+  if (act === "copy") {
+    try { await navigator.clipboard.writeText(d.text); d.status = "Copied."; d.bad = false; }
+    catch { d.status = "Couldn't copy; select the text and press Cmd+C."; d.bad = true; }
+    return render();
+  }
+  if (act === "write") {
+    Object.assign(d, { busy: true, status: "Reading the thread and drafting… (usually 10–40 seconds)", bad: false });
+    render();
+    try {
+      const r = await api("/api/draft", { account: m.account, threadId: m.threadId, instructions: d.instructions });
+      Object.assign(d, { text: r.text, status: "Draft ready. Edit it, then save.", bad: false });
+    } catch (e) { Object.assign(d, { status: esc(e.message), bad: true }); }
+    d.busy = false;
+    return render();
+  }
+  if (act === "save") {
+    Object.assign(d, { busy: true, status: "Saving…", bad: false });
+    render();
+    try {
+      const r = await api("/api/save-draft", { account: m.account, id: m.id, body: d.text });
+      Object.assign(d, { status: `Saved to Drafts (to ${esc(r.to)}). <a href="${r.link}" target="_blank" rel="noopener">Open Drafts</a>`, bad: false });
+    } catch (e) { Object.assign(d, { status: esc(e.message), bad: true }); }
+    d.busy = false;
+    return render();
+  }
+}
+
 let searchTimer;
 $("#search").addEventListener("input", (e) => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => { state.search = e.target.value.trim(); render(); }, 120);
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "/" && document.activeElement !== $("#search")) { e.preventDefault(); $("#search").focus(); }
+  if (e.key === "/" && !["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName)) { e.preventDefault(); $("#search").focus(); }
 });
 
 $("#hideRead").checked = state.hideRead;

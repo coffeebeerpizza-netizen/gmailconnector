@@ -94,7 +94,31 @@ It opens <http://127.0.0.1:8765>. Keep the Terminal window open while you use it
 - **Filters:** turn accounts on or off, hide read emails, or search (press `/`). The menu at the top switches between Starred, Starred & unread, Important, and Unread inbox.
 - **Links:** Open goes to the email in Gmail, and Unsubscribe appears for newsletters that offer it.
 
+- **Draft reply:** this button appears on emails from people. You can type what you want to say (e.g. "yes, Tuesday works"), then click **Write draft with Claude**. Edit the draft, then click **Save to Gmail drafts**. It's saved in the same conversation and never sent automatically. Drafting uses the Claude Code on your Mac, signed in with your normal Claude account, so you don't need an API key. Claude runs with all of its tools switched off, so text inside an email can't make it do anything. Set `DRAFT_MODEL=opus` to use a different model.
+
+
 The dashboard only accepts connections from your own computer, and every request has to carry a secret key that changes each time it starts. Other websites can't use it.
+
+## Daily digest email
+
+A morning email listing who's waiting on you (unread emails from people), then your starred reading, grouped by kind.
+
+```bash
+npm run digest -- --preview        # see it in your browser
+npm run digest                     # send it to yourself now
+npm run digest -- --install 7:45   # send it every day at 7:45 (macOS)
+npm run digest -- --uninstall      # stop it
+```
+
+The digest is sent from your default account to itself. To send it somewhere else, install with `DIGEST_TO=you@example.com npm run digest -- --install 7:45`. If your Mac is asleep at that time, the digest goes out when it wakes. Each run is logged in `~/.gmail-multi-mcp/digest.log`.
+
+## Menu bar widget
+
+The menu bar shows your starred-and-unread count, and how many of those are from people. Its menu lists the people waiting on you, each group, an **Open dashboard** item, and an **Email me the digest now** item. It refreshes every 10 minutes.
+
+1. Install [SwiftBar](https://swiftbar.app), which is free. Download it from the site, or if you have Homebrew run `brew install --cask swiftbar`.
+2. Run `npm run menubar -- --install`.
+3. Open SwiftBar. If it asks for a plugin folder, choose `~/.gmail-multi-mcp/menubar`. In the folder picker, press Cmd+Shift+. to show hidden folders.
 
 ## Notes
 - **Scope:** `gmail.modify` lets the server read, send, label, archive and trash mail. It can't permanently delete mail.
