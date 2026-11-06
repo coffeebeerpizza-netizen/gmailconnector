@@ -54,7 +54,7 @@ server.registerTool(
     inputSchema: {
       query: z.string().default("in:inbox").describe("Gmail search query"),
       account: z.string().optional().describe("Email or alias, or 'all' for every account. Omit for the default account."),
-      max_results: z.number().int().min(1).max(50).default(10).describe("Per account"),
+      max_results: z.number().int().min(1).max(500).default(10).describe("Per account (up to 500)"),
     },
   },
   async ({ query, account: key, max_results }) => {
@@ -71,13 +71,25 @@ server.registerTool(
     await Promise.all(targets.map(async (acct) => {
       try {
         const api = gmailFor(acct);
-        const { data: list } = await api.users.messages.list({ userId: "me", q: query, maxResults: max_results });
-        const msgs = await Promise.all((list.messages || []).map((m) =>
-          api.users.messages.get({
-            userId: "me", id: m.id, format: "metadata", metadataHeaders: ["From", "To", "Subject", "Date"],
-          })
-        ));
-        results.push(...msgs.map((r) => summarize(r.data, acct.email)));
+        // Page through results until we have max_results ids.
+        const ids = [];
+        let pageToken;
+        do {
+          const { data: list } = await api.users.messages.list({
+            userId: "me", q: query, maxResults: Math.min(500, max_results - ids.length), pageToken,
+          });
+          ids.push(...(list.messages || []).map((m) => m.id));
+          pageToken = list.nextPageToken;
+        } while (pageToken && ids.length < max_results);
+        // Fetch headers in small batches to stay under Gmail's rate limits.
+        for (let i = 0; i < ids.length; i += 20) {
+          const batch = await Promise.all(ids.slice(i, i + 20).map((id) =>
+            api.users.messages.get({
+              userId: "me", id, format: "metadata", metadataHeaders: ["From", "To", "Subject", "Date"],
+            })
+          ));
+          results.push(...batch.map((r) => summarize(r.data, acct.email)));
+        }
       } catch (e) {
         errors.push(explainError(e, acct));
       }
